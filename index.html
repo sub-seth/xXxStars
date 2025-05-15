@@ -458,19 +458,40 @@
     const searchInput = document.getElementById('search');
     const sortSelect = document.getElementById('sort');
     const themeToggle = document.getElementById('theme-toggle');
-
+    
     // Initialize the page
     document.addEventListener('DOMContentLoaded', () => {
         loadThemePreference();
-        renderProfiles(users);
+        // Set default sort to alphabetical (A-Z) and update the select element
+        sortSelect.value = 'name-asc';
+        const sortedUsers = sortUsers(users, 'name-asc');
+        renderProfiles(sortedUsers);
         setupEventListeners();
     });
-
+    
     // Calculate age from birth year
     function calculateAge(birthYear) {
         return new Date().getFullYear() - birthYear;
     }
-
+    
+    // Sort users based on criteria
+    function sortUsers(users, sortValue) {
+        const usersCopy = [...users];
+        
+        switch (sortValue) {
+            case 'name-asc':
+                return usersCopy.sort((a, b) => a.name.localeCompare(b.name));
+            case 'name-desc':
+                return usersCopy.sort((a, b) => b.name.localeCompare(a.name));
+            case 'age-asc':
+                return usersCopy.sort((a, b) => calculateAge(a.birthYear) - calculateAge(b.birthYear));
+            case 'age-desc':
+                return usersCopy.sort((a, b) => calculateAge(b.birthYear) - calculateAge(a.birthYear));
+            default:
+                return usersCopy;
+        }
+    }
+    
     // Render profiles to the DOM
     function renderProfiles(profiles) {
         profilesContainer.innerHTML = '';
@@ -488,8 +509,8 @@
             profileCard.innerHTML = `
                 <div class="profile-image-container">
                     <img src="${user.image}" alt="${user.name}" class="profile-image" 
-                        loading="lazy"
-                        onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1499996860823-5214fcc65f8f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8cG9ydHJhaXR8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&w=500&q=60'">
+                         loading="lazy"
+                         onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1499996860823-5214fcc65f8f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8cG9ydHJhaXR8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&w=500&q=60'">
                 </div>
                 <div class="profile-info">
                     <h3 class="profile-name" title="${user.name}">${user.name}</h3>
@@ -498,6 +519,7 @@
                         <span>${age} years</span>
                     </div>
                     <div class="profile-detail">
+                        <i class="fas fa-map-marker-alt detail-icon"></i>
                         <span class="fi fi-${user.countryCode} flag-icon"></span>
                         <span>${user.birthplace}</span>
                     </div>
@@ -507,14 +529,14 @@
             profilesContainer.appendChild(profileCard);
         });
     }
-
+    
     // Setup all event listeners
     function setupEventListeners() {
         searchInput.addEventListener('input', debounce(handleSearch, 300));
         sortSelect.addEventListener('change', handleSort);
         themeToggle.addEventListener('click', toggleTheme);
     }
-
+    
     // Debounce function for search
     function debounce(func, delay) {
         let timeoutId;
@@ -525,13 +547,15 @@
             timeoutId = setTimeout(() => func.apply(context, args), delay);
         };
     }
-
+    
     // Handle search functionality
     function handleSearch() {
         const searchTerm = searchInput.value.trim().toLowerCase();
         
         if (!searchTerm) {
-            renderProfiles(users);
+            const sortValue = sortSelect.value;
+            const sortedUsers = sortUsers(users, sortValue);
+            renderProfiles(sortedUsers);
             return;
         }
         
@@ -540,41 +564,25 @@
             user.birthplace.toLowerCase().includes(searchTerm)
         );
         
-        renderProfiles(filteredUsers);
+        const sortValue = sortSelect.value;
+        const sortedUsers = sortUsers(filteredUsers, sortValue);
+        renderProfiles(sortedUsers);
     }
-
+    
     // Handle sorting functionality
     function handleSort() {
         const sortValue = sortSelect.value;
-        let sortedUsers = [...users];
-        
-        switch (sortValue) {
-            case 'name-asc':
-                sortedUsers.sort((a, b) => a.name.localeCompare(b.name));
-                break;
-            case 'name-desc':
-                sortedUsers.sort((a, b) => b.name.localeCompare(a.name));
-                break;
-            case 'age-asc':
-                sortedUsers.sort((a, b) => calculateAge(a.birthYear) - calculateAge(b.birthYear));
-                break;
-            case 'age-desc':
-                sortedUsers.sort((a, b) => calculateAge(b.birthYear) - calculateAge(a.birthYear));
-                break;
-            default:
-                break;
-        }
-        
+        const sortedUsers = sortUsers(users, sortValue);
         renderProfiles(sortedUsers);
     }
-
+    
     // Theme functionality
     function loadThemePreference() {
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-theme', savedTheme);
         updateThemeIcon(savedTheme);
     }
-
+    
     function toggleTheme() {
         const currentTheme = document.documentElement.getAttribute('data-theme');
         const newTheme = currentTheme === 'light' ? 'dark' : 'light';
@@ -583,7 +591,7 @@
         localStorage.setItem('theme', newTheme);
         updateThemeIcon(newTheme);
     }
-
+    
     function updateThemeIcon(theme) {
         const icon = themeToggle.querySelector('i');
         icon.className = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
